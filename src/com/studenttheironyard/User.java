@@ -6,14 +6,14 @@ package com.studenttheironyard;
 
 public class User {
     Integer id;
-    String address;
     String username;
+    String address;
     String email;
 
     public User() {
     }
 
-    public User(Integer id, String address, String username, String email) {
+    public User(Integer id, String username, String address, String email) {
         this.id = id;
         this.address = address;
         this.username = username;

@@ -12,7 +12,7 @@ public class Main {
 
     public static void createTables(Connection conn) throws SQLException {
         Statement stmt = conn.createStatement();
-        stmt.execute("CREATE TABLE IF NOT EXISTS messages (id IDENTITY, username VARCHAR, address VARCHAR, email VARCHAR)");
+        stmt.execute("CREATE TABLE IF NOT EXISTS registrations (id IDENTITY, username VARCHAR, address VARCHAR, email VARCHAR)");
     }
 
     public static void insertUser(Connection conn, User reg) throws SQLException {
@@ -28,7 +28,7 @@ public class Main {
         ResultSet results = stmt.executeQuery();
         ArrayList<User> regs = new ArrayList<>();
         while (results.next()) {
-            Integer id = results.getInt("id");
+            int id = results.getInt("id");
             String username = results.getString("username");
             String address = results.getString("address");
             String email = results.getString("email");
@@ -38,12 +38,19 @@ public class Main {
         return regs;
     }
 
-    public static void editUser(Connection conn) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement("UPDATE ")
+    public static void updateUser(Connection conn, User reg) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("UPDATE registrations SET username=?, address=?, email=? WHERE id=?");
+        stmt.setString(1, reg.username);
+        stmt.setString(2, reg.address);
+        stmt.setString(3, reg.email);
+        stmt.setInt(4, reg.id);
+        stmt.execute();
     }
 
-    public static void deleteUser(Connection conn) {
-        PreparedStatement stmt = conn.prepareStatement("DELETE ")
+    public static void deleteUser(Connection conn, int id) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement("DELETE FROM registrations WHERE id = ?");
+        stmt.setInt(1, id);
+        stmt.execute();
     }
 
     public static void main(String[] args) throws SQLException {
@@ -55,37 +62,45 @@ public class Main {
         Spark.init();
 
         Spark.get(
-                "/get-user",
+                "/user",
                 (request, response) -> {
                     ArrayList<User> regs = selectUsers(conn);
                     JsonSerializer s = new JsonSerializer();
                     return s.serialize(regs);
                 }
         );
+
         Spark.post(
-                "/add-user",
+                "/user",
                 (request, response) -> {
+                        String body = request.body();
+                        JsonParser p = new JsonParser();
+                        User reg = p.parse(body, User.class);
+                        insertUser(conn, reg);
+                        return "";
+                }
+        );
+
+        Spark.put(
+                "/user",
+                (request, response) -> { //update user in database
                     String body = request.body();
                     JsonParser p = new JsonParser();
                     User reg = p.parse(body, User.class);
-                    insertUser(conn, reg);
+                    updateUser(conn, reg);
                     return "";
                 }
         );
-        Spark.put(
-                "/edit-user",
-                (request, response) -> {
-                    //update message in database
-                    return "";
-                }
-        );
-        Spark.delete(
-                "/delete-user",
-                (request, response) -> {
-                    //delete message in database
-                    return "";
-                }
 
+        Spark.delete(
+                "/user/:id",
+                (request, response) -> { //delete user in database
+                    int id = Integer.valueOf(request.params("id"));
+                    deleteUser(conn, id);
+                    return"";
+                }
         );
+
+
     }
 }
